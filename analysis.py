@@ -33,21 +33,17 @@ def rms(raw,save_dir,title,Plot=True):
         final(list): list of RMS values for each frame
     """
     
+#    Convert to nm
+    data = np.multiply(raw,600)
  
-  
-#    Applypply the influence function   
-    data = influence(raw)
-    print('Influence Success')
-
     final = []
     print('Generating RMS')
 #    Load in the WFS pupil to act as a guide. If the pixle isn't illuminated on the pupil, the point is ignored
     control_array = np.load('WFSPupil.npy')
 
 
-#    For each frame in the raw data: 
-#        1)Convert to nm
-#        2)Check if the point is on the pupil
+#    For each frame in the data: 
+#        1)Check if the point is on the pupil
 #        3)Use the valid points to create the rms for the frame
     for point in data:
     
@@ -66,23 +62,23 @@ def rms(raw,save_dir,title,Plot=True):
 
 #    Create and save the plots for the RMS
     if 'dmc' or 'DMC' in title:
-        plt.plot(final)
+        plt.plot(final,zorder = 0)
         plt.title('DMC RMS') 
         plt.xlabel('Frame')
         plt.ylabel('RMS (nm)')
-        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.5g'))
+        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.5g')+ ' nm',zorder = 10)
         plt.legend()
-        plt.savefig(save_dir+'\\DMC_RMS.png')
+        plt.savefig(save_dir+'\\DMC_RMS.pdf')
         
         
     elif 'residual' in title:
-        plt.plot(final)
+        plt.plot(final,zorder = 0)
         plt.title('Residual RMS') 
         plt.xlabel('Frame')
         plt.ylabel('RMS (nm)')
-        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.5g'))
+        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.5g')+ ' nm',zorder = 10)
         plt.legend()
-        plt.savefig(save_dir+'\\residual_RMS.png')
+        plt.savefig(save_dir+'\\residual_RMS.pdf')
         
     if Plot == True:
         plt.show()
@@ -167,8 +163,7 @@ def low_order_analysis(data,rad,nz):
 #   Decompose all the data        
     master,difs = dc.decomp_all(inner,nz,rad)
     
-    
-#    Print stats on coefficients
+    #    Print stats on coefficients
     for j in range(0,11):
         print('J= ',j)
         print('Mean coefficient: ',stat.mean(master[j]))
