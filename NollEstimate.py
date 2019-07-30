@@ -15,11 +15,9 @@ import math
 import numpy as np
 from scipy import io
 from matplotlib import pyplot as plt
-from astropy.io import fits
 import statistics as stat
 import Decompose as dc
 from zernike import zernikeArray
-import sys
  
 
 
@@ -43,8 +41,11 @@ def fried(data,jmin,jmax,D,nz,rad,save_dir,save_plot,sim,plot = True):
         r0(float):  An estimate of the Fried parameter in arcseconds derived from the Zernike decomposition
     """
     if sim == True:
+#        Converts simulated data into on-sky format
         outer = convert_sim(data)
         print("Conversion Successful")
+        
+         ###cuts out the desired inner circle for Zernike decomposition
         inner = inner_circle(outer,rad)
         print("Inner Circle Success")
     
@@ -106,6 +107,7 @@ def fried(data,jmin,jmax,D,nz,rad,save_dir,save_plot,sim,plot = True):
         for j in range(6,75):
             seperations.append(abs(abs(fit_diff[j]) - var_list[j]))
 
+#       Finds the lowest seperation for the fit curve, then saves that r0
         if np.mean(seperations) > lastdif:
             r0 = r
             break
@@ -115,16 +117,19 @@ def fried(data,jmin,jmax,D,nz,rad,save_dir,save_plot,sim,plot = True):
     
     aprox = []
     
+#    Draws the approximate curve for the estimated r0
     for j in range(0,10):
             aprox.append(an[j]*((D/r0)**(5/3)))               
     for J in range(11,nz+1):
             aprox.append((0.2944*(J**(math.sqrt(3)/-2))*((D/r0)**(5/3))))
             
             
+#   Calculates the differences for the variance plot
     aprox_difs = np.diff(aprox)
     aprox_plot = []
     for element in aprox_difs:
         aprox_plot.append(abs(element))
+    
     
 #   Calculate error on r0
     r_err = (0.2944*(J**(math.sqrt(3)/-2))*((D/var_err)**(5/3))) 
@@ -143,7 +148,7 @@ def fried(data,jmin,jmax,D,nz,rad,save_dir,save_plot,sim,plot = True):
     if plot == True:           
         plt.yscale('log')        
         plt.plot(var_list,'b')
-        plt.plot(aprox_plot,'k',label = 'Fit r0 = '+format(r0,'.5g')+' m')
+        plt.plot(aprox_plot,'k',label = 'Fit r0 = '+format(r0,'.4g')+' m')
         plt.title('Variance vs. Zernike Mode On-Sky') 
         plt.legend()
         plt.xlabel('Zernike Mode')
@@ -151,7 +156,7 @@ def fried(data,jmin,jmax,D,nz,rad,save_dir,save_plot,sim,plot = True):
         
 #        Save Results
         if save_plot == True:
-            plt.savefig(save_dir.strip('"')+'//variance_vs_Mode.jpeg')
+            plt.savefig(save_dir.strip('"')+'//variance_vs_Mode.pdf')
             
         plt.legend()
         plt.show()
@@ -200,18 +205,16 @@ def inner_circle(data,diam):
     return fin
 
 
-def convert_sim(filename):
+def convert_sim(data):
     """Converts simulated data into the same fromat as the on sky data
     
     Arguments:
-        filename(string): file containing the simulated data
+        data(numpy array): simulated data
         
     Returns:
         final(numpy array): Array containing the simulated data in the on sky format
     """
-    
-    with fits.open(filename) as hdul:
-            data = hdul[0].data
+
             
     final = []
     
@@ -225,7 +228,7 @@ def convert_sim(filename):
 #       Converts to the same shape as the on-sky as well as converting from volts to phase
         for row in range(0,21):
             for colm in range(0,21):
-                hold[row][colm] = 2*math.pi*(1/500)*(10e8*frame[i])
+                hold[row][colm] = (2*math.pi*(1/500)*10e8*frame[i])
                 i += 1
 
         final.append(hold)
@@ -275,8 +278,8 @@ def influence(data):
             weighted = np.multiply(weight,influence[:,:,mode])
             hold = np.add(hold,weighted)
         
-#        Convert from volts to nm
-        final.append(np.multiply(2*math.pi*(480/500),hold))
+#        Convert from volts to phase
+        final.append(np.multiply(2*math.pi*(489/500),hold))        
         
         if framenum == (len(data)//2):
             print("Halfway of Influence")

@@ -13,7 +13,6 @@ Last Updated:
 import math
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy import io
 import Decompose as dc
 import NollEstimate as ne
 import statistics as stat
@@ -38,6 +37,7 @@ def rms(raw,save_dir,title,Plot=True):
  
     final = []
     print('Generating RMS')
+    
 #    Load in the WFS pupil to act as a guide. If the pixle isn't illuminated on the pupil, the point is ignored
     control_array = np.load('WFSPupil.npy')
 
@@ -66,7 +66,7 @@ def rms(raw,save_dir,title,Plot=True):
         plt.title('DMC RMS') 
         plt.xlabel('Frame')
         plt.ylabel('RMS (nm)')
-        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.5g')+ ' nm',zorder = 10)
+        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.4g')+ ' nm',zorder = 10)
         plt.legend()
         plt.savefig(save_dir+'\\DMC_RMS.pdf')
         
@@ -76,7 +76,7 @@ def rms(raw,save_dir,title,Plot=True):
         plt.title('Residual RMS') 
         plt.xlabel('Frame')
         plt.ylabel('RMS (nm)')
-        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.5g')+ ' nm',zorder = 10)
+        plt.hlines(np.average(final),0,len(final),'r',label = 'Avg: '+format(np.average(final),'.4g')+ ' nm',zorder = 10)
         plt.legend()
         plt.savefig(save_dir+'\\residual_RMS.pdf')
         
@@ -87,69 +87,22 @@ def rms(raw,save_dir,title,Plot=True):
     return final
 
 
-def influence(data):
-    """Applies the influence function to the DM commands
-    
-    Arguments: 
-        data(numpy Array): raw DM commands
-        
-    Returns:
-        final(numpy array): True shape of the wavefront
-    """
-    
-#    Load in pre-generated Influence function
-    influence = io.loadmat("Influence 101.mat")['ans']
-    
-#    Set indices of DM commands in larger shape array
-    indexes = np.linspace(0,100,21)
-    z = [ (a,b) for a in indexes for b in indexes ]
-
-
-
-    final = []
-
-    framenum = 1
-#   Takes each frame of 21x21 DM commands and scales it by a factor of 5 to allow for the shape of the influence function       
-    for frame in data:  
-        data_big = np.zeros_like(influence[:,:,1])
-        for row in range(0,len(frame)):
-            for column in range(0,len(frame)):
-                data_big[int(5 * row)][int(5 * column)] = frame[row][column] 
-                
-        
-        hold = np.zeros_like(data_big)
-        
-#        For each of the acutators, apply the influence function
-#        Sum these influences together to get the true shape of the DM
-        for mode in range(0,441):
-            column,row = z[mode] 
-            weight = data_big[int(row),int(column)]
-            weighted = np.multiply(weight,influence[:,:,mode])
-            hold = np.add(hold,weighted)
-        
-#        Convert from volts to nm
-        final.append(np.multiply(2*math.pi*(480/500),hold))
-        
-        
-        if framenum == (len(data)//2):
-            print("Halfway of Influence")
-        framenum+=1
-        
-        
-    return final
-
-
 
 def low_order_analysis(data,rad,nz):
     """Collects data on the low order Zernike coefficients
     
     Arguments:
         data(numpy array): raw data
+        rad(int): radius of the inner circle to decompose in # of actuators (eg. 17x17)
+        nz(int): Noll index of the maximum Zernike mode to use in the decomposition
+        
+    returns:
+           The mean and standard deviation of the coefficients for each of the first 10 modes
         
     """
     
     #        Applies influence funtion
-    outer = influence(data)
+    outer = ne.influence(data)
     rad = 5 * rad
     print('Influence Success')
     
